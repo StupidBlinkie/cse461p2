@@ -10,30 +10,28 @@ def handle(conn_tcp, addr_tcp):
     request = conn_tcp.recv(1024)
     print request
 
-    ###get web server (host line)
-    request_lines = request.split("\n");
-    # print "total lines are : ", len(request_lines)
+    ###get web server and port (host line)
+    request_lines = request.split("\n");    #split each line
+    server_line_str = request_lines[1].replace(" ","").lower()  #strip out whitespace
+    server_index = server_line_str.find("host:") + 5
 
-    port = 0
-
-    server_line_str = request_lines[1].strip()  #strip out whitespace
-    server_index = server_line_str.lower().find("host:") + 5  
-    server_str = server_line_str[server_index:]
+    server_str = '%s' % server_line_str[server_index:] 
     print server_str
 
     port = 0
     if (server_str.find(":") > 0):
         port = server_str[server_str.find(":"):] #find port in second line
-    else
-        if (request_lines[0].lower().find("https://")):
+    else:
+        if (request_lines[0].lower().find("https://") > 0):
             port = 443
-        else
+        else:
             port = 80
 
+    # server_str = server_str + ':' + str(port)  #??BUGGY--appeding to fornt?????
+    # print server_str
         
 
-
-    #Turning off keep-alive
+    ###Turning off keep-alive
     request = request.replace("Connection: keep-alive", "Connection: close")
     #print request
 
@@ -41,6 +39,9 @@ def handle(conn_tcp, addr_tcp):
 
 
 
+    ###establish tcp connection to server
+    # tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # tcp_socket.coonet((server_str, port))
 
 
 
