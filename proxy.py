@@ -1,23 +1,20 @@
 import socket
 import sys
 import threading
+import os
 
 
 def handle(conn_tcp, addr_tcp):
 
-    print "a new connection is created, ", addr_tcp 
+    # print "a new connection is created, ", addr_tcp 
 
-    request = conn_tcp.recv(1024)
-    print request
+    request = conn_tcp.recv(4096)
 
     ###get web server and port (host line)
     request_lines = request.split("\n");    #split each line
     server_line_str = request_lines[1].replace(" ","").lower()  #strip out whitespace
     server_index = server_line_str.find("host:") + 5
-
     server_str = '%s' % server_line_str[server_index:] 
-    print server_str
-
     port = 0
     if (server_str.find(":") > 0):
         port = server_str[server_str.find(":"):] #find port in second line
@@ -30,18 +27,33 @@ def handle(conn_tcp, addr_tcp):
     # server_str = server_str + ':' + str(port)  #??BUGGY--appeding to fornt?????
     # print server_str
         
-
+    print request_lines[0]
     ###Turning off keep-alive
     request = request.replace("Connection: keep-alive", "Connection: close")
-    #print request
-
-    print "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>"
-
+    # print "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>"
 
 
     ###establish tcp connection to server
-    # tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # tcp_socket.coonet((server_str, port))
+    try:
+        print port == 80
+        server_str = server_str[0:(len(server_str) - 1)]
+        tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp.connect((server_str, port))
+        tcp.send(request)
+
+        while 1:
+            requestedData = tcp.recv(4096)
+            if len(requestedData) > 0:
+                print requestedData
+                conn_tcp.sendall(requestedData)
+            else:
+                break
+        tcp.close()
+        conn_tcp.close()
+
+    except socket.error, (value, message):
+        # print "Some error"
+        sys.exit(1)
 
 
 
@@ -55,7 +67,7 @@ if __name__ == "__main__":
 
     host = ''
     port = int (sys.argv[1])
-
+    # print "successful user input"
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind((host, port))
     tcp_socket.listen(100)
@@ -64,7 +76,7 @@ if __name__ == "__main__":
 
     while True:
         conn_tcp, addr_tcp = tcp_socket.accept()
-
+        print "connection established"
         tcp_thread = threading.Thread(target=handle, args=(conn_tcp, addr_tcp))
         tcp_thread.daemon = True
         tcp_thread.start()
