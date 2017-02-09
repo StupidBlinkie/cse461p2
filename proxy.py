@@ -36,29 +36,55 @@ def handle(conn_tcp, addr_tcp):
         print ">>> " + request_lines[0]
 
         ###Turning off keep-alive
-        request = request.replace("Connection: keep-alive", "Connection: close")
-
-        
+        request = request.replace("Connection: keep-alive", "Connection: close") 
+        if request_lines[0].lower().find("connect") != -1:
+            print "Connect request"
+            try:
+                print "entered try"
+                badgateway = "HTTP/1.0 502 BAD GATEWAY\r\n\r\n";
+                good = "HTTP/1.1 200 OK\r\n\r\n";
+                server_str = server_str[0:(len(server_str) - 1)]
+                tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp.connect((server_str, port))
+                conn_tcp.sendall(good)
+                clientdata = conn_tcp.recv(4096)
+                print "clientdata", clientdata
+                while 1:
+                    print "loop"
+                    requestedData = tcp.recv(4096)
+                    print requestedData
+                    if len(requestedData) > 0:
+                        # print requestedData
+                        conn_tcp.sendall(requestedData)
+                    else:
+                        break
+                tcp.close()
+                conn_tcp.close()
+            except socket.error, (value, message):
+                print "error"
+                conn_tcp.sendall(badgateway)
+                conn_tcp.close()
         ###establish tcp connection to server
-        try:
-            server_str = server_str[0:(len(server_str) - 1)]
-            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcp.connect((server_str, port))
-            tcp.send(request)
+        else:
+            try:
+                server_str = server_str[0:(len(server_str) - 1)]
+                tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp.connect((server_str, port))
+                tcp.send(request)
 
-            while 1:
-                requestedData = tcp.recv(4096)
-                if len(requestedData) > 0:
-                    # print requestedData
-                    conn_tcp.sendall(requestedData)
-                else:
-                    break
-            tcp.close()
-            conn_tcp.close()
+                while 1:
+                    requestedData = tcp.recv(4096)
+                    if len(requestedData) > 0:
+                        # print requestedData
+                        conn_tcp.sendall(requestedData)
+                    else:
+                        break
+                tcp.close()
+                conn_tcp.close()
 
-        except socket.error, (value, message):
-            # print "Some error"
-            sys.exit(1)
+            except socket.error, (value, message):
+                # print "Some error"
+                sys.exit(1)
 
 
 
