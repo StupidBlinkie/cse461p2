@@ -15,6 +15,7 @@ def handle(conn_tcp, addr_tcp):
         request_lines = request.split("\n");    #split each line
         server_str = ''
         port = 80
+
         for lines in request_lines:
             temp = lines
             temp = temp.replace(" ", "").lower()
