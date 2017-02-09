@@ -2,6 +2,7 @@ import socket
 import sys
 import threading
 import os
+import select
 
 
 def handle(conn_tcp, addr_tcp):
@@ -38,32 +39,39 @@ def handle(conn_tcp, addr_tcp):
         ###Turning off keep-alive
         request = request.replace("Connection: keep-alive", "Connection: close") 
         if request_lines[0].lower().find("connect") != -1:
-            print "Connect request"
             try:
-                print "entered try"
                 badgateway = "HTTP/1.0 502 BAD GATEWAY\r\n\r\n";
                 good = "HTTP/1.1 200 OK\r\n\r\n";
-                server_str = server_str[0:(len(server_str) - 1)]
+                server_str = server_str[0:len(server_str)]
                 tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 tcp.connect((server_str, port))
                 conn_tcp.sendall(good)
-                clientdata = conn_tcp.recv(4096)
-                print "clientdata", clientdata
+                inputs = [tcp, conn_tcp]
+                outputs = [tcp, conn_tcp]
                 while 1:
-                    print "loop"
-                    requestedData = tcp.recv(4096)
-                    print requestedData
-                    if len(requestedData) > 0:
-                        # print requestedData
-                        conn_tcp.sendall(requestedData)
-                    else:
+                    try:
+                        inputready,outputready,exceptready = select.select(inputs, outputs, [])
+                    except select.error, e:
                         break
+                    except socket.error, e:
+                        break
+
+                    for sockin in inputready:
+                        if sockin == tcp:
+                            webhost = sockin.recv(4096)
+                            if len(webhost) > 0:
+                                conn_tcp.sendall(webhost)
+                        elif sockin == conn_tcp:
+                            browser = sockin.recv(4096)
+                            if len(browser) > 0:
+                                tcp.send(browser)
                 tcp.close()
                 conn_tcp.close()
             except socket.error, (value, message):
                 print "error"
                 conn_tcp.sendall(badgateway)
                 conn_tcp.close()
+                
         ###establish tcp connection to server
         else:
             try:
